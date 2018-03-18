@@ -5,6 +5,7 @@ import torch.nn.functional as F  # torch functions
 class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
+        
         # convolutional layers
         # 1 image, 6 output channels, 5*5 convolution
         self.conv1 = nn.Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1))
