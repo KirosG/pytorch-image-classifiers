@@ -6,10 +6,10 @@ class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
         # convolutional layers
-        # 1 image, 6 output channels, 5x5 convolution
+        # 1 image, 6 output channels, 5*5 convolution
         self.conv1 = nn.Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1))
         self.conv2 = nn.Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1))
-        
+
         # hidden layers
         # self.fc1 = nn.Linear(16 * 5 * 5, 120)  # layer 1 activation
         self.fc1 = nn.Linear(4, 120)  # layer 1 activation
