@@ -15,14 +15,12 @@ def train_load():
     transform = transforms.Compose(
         [transforms.ToTensor()]
     )
-
     data = torchvision.datasets.MNIST(
         root='./data/',
         train=True,
         download=True,
         transform=transform,
     )
-
     loader = torch.utils.data.DataLoader(
         data,
         batch_size=4,
