@@ -21,6 +21,14 @@ from models.lenet import LeNet
 from visuals import plot_accuracy, plot_loss
 
 
+USE_CUDA = torch.cuda.is_available()
+if USE_CUDA:
+    print("GPU Acceleration enabled.")
+else:
+    print("No GPUs detected.")
+
+
+
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
 
@@ -62,6 +70,8 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
     total = 0
     for i, (inputs, labels) in enumerate(dataloader, 0):
         # wrap features as torch Variables
+        if USE_CUDA:
+            inputs, labels = inputs.cuda(), labels.cuda()
         inputs, labels = Variable(inputs), Variable(labels)
 
         # zero the parameter gradients
@@ -99,6 +109,13 @@ def main(models, training=True, verbose=True):
     for model in range(models):  # Our Epochs
         print("Model {}...".format(model+1))
         net = LeNet()
+        if USE_CUDA:
+            net.cuda()
+            net = torch.nn.DataParallel(
+                net,
+                device_ids=range(torch.cuda.device_count())
+            )
+            cudnn.benchmark = True
         print(net)
         dataloader = load_data(training=training)
         criterion = nn.CrossEntropyLoss()

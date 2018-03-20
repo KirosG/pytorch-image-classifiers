@@ -13,9 +13,9 @@ class LeNet(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1))
 
         # Fully Connected Layers
-        self.fc1 = nn.Linear(256, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc1 = nn.Linear(256, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 10)
 
     def forward(self, x):
         """

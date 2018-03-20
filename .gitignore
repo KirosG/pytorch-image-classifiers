@@ -1,5 +1,5 @@
 *.tar
-
+*.png
 __pycache__/
 .idea/
 data/*
