@@ -23,6 +23,37 @@ from models.lenet import LeNet
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
 
+
+def plot_loss(df):
+    g = sns.lmplot(
+        x='step',
+        y='loss_scores',
+        data=df,
+        col='model_n',
+        hue='model_n',
+        col_wrap=2,
+        fit_reg=False
+    ).set_axis_labels("Steps", "Loss")
+    g.fig.subplots_adjust(top=0.9)
+    g.fig.suptitle("Model Loss")
+    plt.show()
+
+
+def plot_accuracy(df):
+    g = sns.lmplot(
+        x='step',
+        y='acc_scores',
+        data=df,
+        col='model_n',
+        hue='model_n',
+        col_wrap=2,
+        fit_reg=False
+    ).set_axis_labels("Steps", "Accuracy")
+    g.fig.subplots_adjust(top=0.9)
+    g.fig.suptitle("Model Accuracy")
+    plt.show()
+
+
 def unpack_data(data):
     iterations = [i[0] for i in data]
     loss_scores = [i[1] for i in data]
@@ -45,7 +76,7 @@ def load_data(training=True):
     )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=16,
+        batch_size=8,
         shuffle=True,
         num_workers=2,
     )
@@ -83,8 +114,8 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
 
             # print results
             if verbose and i % 500 == 499:
-                print(" Batch: %5d - Loss: %.3f" % (i+1, running_loss/100))
-                print(" Accuracy: {:.2f}%".format(accuracy))
+                print("Batch: %5d - Loss: %.3f" % (i+1, running_loss/100))
+                print("Accuracy: {:.2f}%".format(accuracy))
 
             running_loss = 0.0
     print()
@@ -92,15 +123,15 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
     return scores
 
 
-def main(epochs, training=True, verbose=True):
-    net = LeNet()
-    print(net, "\n")
-    dataloader = load_data(training=training)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(net.parameters())
+def main(models, training=True, verbose=True):
     results = defaultdict(list)
-    for epoch in range(epochs):  # Our Epochs
-        print("Epoch {}...".format(epoch+1))
+    for model in range(models):  # Our Epochs
+        print("Model {}...".format(model+1))
+        net = LeNet()
+        print(net)
+        dataloader = load_data(training=training)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(net.parameters())
         scores = train(
             net,  # the model
             dataloader,  # the data provider
@@ -115,17 +146,18 @@ def main(epochs, training=True, verbose=True):
         optimizer.zero_grad()
 
         # add observations ot the dictionary
-        results['step'].append(step)
-        results['loss_scores'].append(loss)
-        results['acc_scores'].append(acc)
-        results['model_n'].append([epoch] * len(step))
+        results['step'] += step
+        results['loss_scores'] += loss
+        results['acc_scores'] += acc
+        results['model_n'] += [model+1] * len(step)
 
-        if training:
-            save_checkpoint({
-                'epoch': epoch+1,
-                'state_dict': net.state_dict(),
-                'optimizer' : optimizer.state_dict(),
-            })
+    if training:
+        save_checkpoint({
+            'state_dict': net.state_dict(),
+            'optimizer' : optimizer.state_dict(),
+        })
+
+    del net, criterion, optimizer
 
     return results
 
@@ -135,9 +167,9 @@ if __name__ == "__main__":
         description="PyTorch Implementation of LeNet.",  # program title
     )
     parser.add_argument(
-        '-epochs',  # argument name
+        '-models',  # argument name
         type=int,  # default data type
-        help="The number of epoch to run",  # cli help description
+        help="The number of models to run",  # cli help description
         required=False,
         default=1,
     )
@@ -155,16 +187,30 @@ if __name__ == "__main__":
         required=False,
         default=False,
     )
+    parser.add_argument(
+        '-plot',
+        type=bool,
+        help='plot model results',
+        required=False,
+        default=False,
+    )
     try:
         args = parser.parse_args(sys.argv[1:])
     except IndexError:
         args = parser.parse_args()  # use default values
 
     # accessing parsed args
-    epochs = args.epochs
+    models = args.models
     training = args.training
     verbose = args.verbose
+    plot = args.plot
 
-    results = main(epochs, training, verbose)
+    # run main code
+    results = main(models, training, verbose)
 
-    parser.exit(message="Finished Training.\n")
+    if plot:
+        df = pd.DataFrame.from_dict(results)
+        plot_loss(df)
+        plot_accuracy(df)
+
+    parser.exit(message="training complete\n")
