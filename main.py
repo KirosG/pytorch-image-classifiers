@@ -96,7 +96,7 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
             # print results
             if verbose and i % 500 == 499:
                 print("Batch: %5d - Loss: %.3f" % (i+1, running_loss/100))
-                print("Accuracy: {:.2f}%".format(accuracy))
+                print("Accuracy: %.2f%" % accuracy)
 
             running_loss = 0.0
     print()
@@ -158,8 +158,8 @@ if __name__ == "__main__":
         '-models',  # argument name
         type=int,  # default data type
         help="The number of models to run",  # cli help description
-        required=False,
-        default=1,
+        required=False,  # does this need to be passed
+        default=1,  # default value for the argument
     )
     parser.add_argument(
         '-training',
