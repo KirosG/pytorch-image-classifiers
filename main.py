@@ -1,4 +1,5 @@
 import sys
+import pip
 import shutil
 import argparse
 from collections import defaultdict
@@ -29,7 +30,7 @@ else:
 
 
 
-def save_checkpoint(state, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
@@ -96,7 +97,7 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
             # print results
             if verbose and i % 500 == 499:
                 print("Batch: %5d - Loss: %.3f" % (i+1, running_loss/100))
-                print("Accuracy: %.2f%" % accuracy)
+                print("Accuracy: %.2f" % accuracy)
 
             running_loss = 0.0
     print()
@@ -189,6 +190,13 @@ if __name__ == "__main__":
         required=False,
         default=False,
     )
+    parser.add_argument(
+        '-build',
+        type=bool,
+        help='install requirements',
+        required=False,
+        default=False,
+    )
     try:
         args = parser.parse_args(sys.argv[1:])
     except IndexError:
@@ -200,6 +208,10 @@ if __name__ == "__main__":
     verbose = args.verbose
     plot = args.plot
     save_fig = args.savefig
+    build = args.build
+
+    if build:
+        pip.main(['install', '-r', 'requirements.txt'])
 
     # run main code
     results = main(models, training, verbose)
@@ -213,7 +225,7 @@ if __name__ == "__main__":
     if save_fig:
         print("saving figures")
         plt.rcParams["figure.figsize"] = (9, 12)
-        loss_.savefig('assets/loss.png', dpi=256)
-        acc_.savefig('assets/accuracy.png', dpi=156)
+        loss_.savefig('plots/loss.png', dpi=256)
+        acc_.savefig('plots/accuracy.png', dpi=156)
 
     parser.exit(message="training complete\n")
