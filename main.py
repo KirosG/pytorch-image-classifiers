@@ -18,40 +18,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from models.lenet import LeNet
+from visuals import plot_accuracy, plot_loss
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
-
-
-def plot_loss(df):
-    g = sns.lmplot(
-        x='step',
-        y='loss_scores',
-        data=df,
-        col='model_n',
-        hue='model_n',
-        col_wrap=2,
-        fit_reg=False
-    ).set_axis_labels("Steps", "Loss")
-    g.fig.subplots_adjust(top=0.9)
-    g.fig.suptitle("Model Loss")
-    plt.show()
-
-
-def plot_accuracy(df):
-    g = sns.lmplot(
-        x='step',
-        y='acc_scores',
-        data=df,
-        col='model_n',
-        hue='model_n',
-        col_wrap=2,
-        fit_reg=False
-    ).set_axis_labels("Steps", "Accuracy")
-    g.fig.subplots_adjust(top=0.9)
-    g.fig.suptitle("Model Accuracy")
-    plt.show()
 
 
 def unpack_data(data):
@@ -104,7 +75,7 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
 
         running_loss += loss.data[0]
 
-        if i % 100 == 99:  # print every 2000 mini-batches
+        if i % 100 == 99:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
@@ -149,15 +120,15 @@ def main(models, training=True, verbose=True):
         results['step'] += step
         results['loss_scores'] += loss
         results['acc_scores'] += acc
-        results['model_n'] += [model+1] * len(step)
+        results['model'] += [model+1] * len(step)
 
-    if training:
-        save_checkpoint({
-            'state_dict': net.state_dict(),
-            'optimizer' : optimizer.state_dict(),
-        })
+        if training:
+            save_checkpoint({
+                'state_dict': net.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            })
 
-    del net, criterion, optimizer
+        # del net, criterion, optimizer
 
     return results
 
@@ -194,6 +165,13 @@ if __name__ == "__main__":
         required=False,
         default=False,
     )
+    parser.add_argument(
+        '-savefig',
+        type=bool,
+        help='save figures',
+        required=False,
+        default=False,
+    )
     try:
         args = parser.parse_args(sys.argv[1:])
     except IndexError:
@@ -204,13 +182,21 @@ if __name__ == "__main__":
     training = args.training
     verbose = args.verbose
     plot = args.plot
+    save_fig = args.savefig
 
     # run main code
     results = main(models, training, verbose)
 
+    df = pd.DataFrame.from_dict(results)
+    loss_ = plot_loss(df)
+    acc_ = plot_accuracy(df)
     if plot:
-        df = pd.DataFrame.from_dict(results)
-        plot_loss(df)
-        plot_accuracy(df)
+        print("plotting figures")
+        plt.show()
+    if save_fig:
+        print("saving figures")
+        plt.rcParams["figure.figsize"] = (9, 12)
+        loss_.savefig('assets/loss.png', dpi=256)
+        acc_.savefig('assets/accuracy.png', dpi=156)
 
     parser.exit(message="training complete\n")
