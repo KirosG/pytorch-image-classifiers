@@ -87,7 +87,7 @@ def train(model, dataloader, criterion, optimizer, epoch):
 
         running_loss += loss.data[0]
 
-        if i % 100 == 99:  # print every 100 mini-batches
+        if i % 50 == 49:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
@@ -109,7 +109,6 @@ def main(epochs, training=True):
     net = LeNet()
     print(net)
 
-
     if USE_CUDA:  # GPU optimization
         net.cuda()
         net = torch.nn.DataParallel(
@@ -117,7 +116,6 @@ def main(epochs, training=True):
             device_ids=range(torch.cuda.device_count())
         )
         cudnn.benchmark = True
-
 
     dataloader = load_data(training=training)
     criterion = nn.CrossEntropyLoss()
@@ -214,4 +212,4 @@ if __name__ == "__main__":
         print("Plotting results...")
         plt.show()
 
-    parser.exit(message="\n\t\t\t- messiest.\n\n")
+    # parser.exit(message="\n\t\t\t- messiest.\n\n")
