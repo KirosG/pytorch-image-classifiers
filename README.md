@@ -1,1 +1,1 @@
-# `pytorch-lenet`
+# `pytorch-image-classifiers``

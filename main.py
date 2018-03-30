@@ -27,6 +27,7 @@ USE_CUDA = torch.cuda.is_available()
 
 sns.set_style('darkgrid')
 
+
 def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
 
@@ -67,7 +68,7 @@ def train(model, dataloader, criterion, optimizer, epoch):
     correct = 0
     total = 0
 
-    pbar = tqdm(dataloader)  # iterable for progress bar
+    pbar = tqdm(dataloader, unit='batch')  # iterable for progress bar
 
     for i, (inputs, labels) in enumerate(pbar):
         # wrap features as torch Variables
@@ -93,7 +94,9 @@ def train(model, dataloader, criterion, optimizer, epoch):
             accuracy = 100. * correct / total
             scores.append((i+1, running_loss/100, accuracy))
 
-            pbar.set_description("Epoch %2d, Accuracy %.2f%%" % (epoch, accuracy))
+            pbar.set_description(
+                "Epoch %2d, Accuracy %.2f%%, Progress" % (epoch, accuracy)
+            )
 
             running_loss = 0.0  # zero the loss
 
