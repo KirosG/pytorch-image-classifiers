@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm, trange
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +15,7 @@ from torch.autograd import Variable
 import torchvision
 import torchvision.transforms as transforms
 from torchvision.transforms import RandomCrop, RandomRotation
-import matplotlib as mpl
+from matplotlib import rcParams
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -23,12 +24,8 @@ from visuals import plot_accuracy, plot_loss
 
 
 USE_CUDA = torch.cuda.is_available()
-if USE_CUDA:
-    print("GPU Acceleration enabled.")
-else:
-    print("No GPUs detected.")
 
-
+sns.set_style('darkgrid')
 
 def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
@@ -64,12 +61,15 @@ def load_data(training=True):
     return loader
 
 
-def train(model, dataloader, criterion, optimizer, verbose=False):
+def train(model, dataloader, criterion, optimizer, epoch):
     scores = []
     running_loss = 0.0
     correct = 0
     total = 0
-    for i, (inputs, labels) in enumerate(dataloader, 0):
+
+    pbar = tqdm(dataloader)  # iterable for progress bar
+
+    for i, (inputs, labels) in enumerate(pbar):
         # wrap features as torch Variables
         if USE_CUDA:
             inputs, labels = inputs.cuda(), labels.cuda()
@@ -91,54 +91,51 @@ def train(model, dataloader, criterion, optimizer, verbose=False):
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
             accuracy = 100. * correct / total
-
             scores.append((i+1, running_loss/100, accuracy))
 
-            # print results
-            if verbose and i % 500 == 499:
-                print("Batch: %5d - Loss: %.3f" % (i+1, running_loss/100))
-                print("Accuracy: %.2f" % accuracy)
+            pbar.set_description("Epoch %2d, Accuracy %.2f%%" % (epoch, accuracy))
 
-            running_loss = 0.0
-    print()
+            running_loss = 0.0  # zero the loss
 
     return scores
 
 
-def main(models, training=True, verbose=True):
+def main(epochs, training=True):
     results = defaultdict(list)
-    for model in range(models):  # Our Epochs
-        print("Model {}...".format(model+1))
-        net = LeNet()
-        if USE_CUDA:
-            net.cuda()
-            net = torch.nn.DataParallel(
-                net,
-                device_ids=range(torch.cuda.device_count())
-            )
-            cudnn.benchmark = True
-        print(net)
-        dataloader = load_data(training=training)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(net.parameters())
+
+    net = LeNet()
+    print(net)
+
+
+    if USE_CUDA:  # GPU optimization
+        net.cuda()
+        net = torch.nn.DataParallel(
+            net,
+            device_ids=range(torch.cuda.device_count())
+        )
+        cudnn.benchmark = True
+
+
+    dataloader = load_data(training=training)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(net.parameters())
+
+    for i in range(epochs):
+
         scores = train(
-            net,  # the model
+            net,  # our model
             dataloader,  # the data provider
             criterion,  # the loss function
             optimizer,  # the optimization algorithm
-            verbose=verbose,  # print results
+            i+1,  # current epoch
         )
         step, loss, acc = unpack_data(scores)
 
-        # reset gradients
-        net.zero_grad()
-        optimizer.zero_grad()
-
-        # add observations ot the dictionary
+        # add observations to the dictionary
         results['step'] += step
         results['loss_scores'] += loss
         results['acc_scores'] += acc
-        results['model'] += [model+1] * len(step)
+        results['epoch'] += [i+1] * len(step)
 
         if training:
             save_checkpoint({
@@ -146,35 +143,36 @@ def main(models, training=True, verbose=True):
                 'optimizer': optimizer.state_dict(),
             })
 
-        # del net, criterion, optimizer
-
     return results
 
 
 if __name__ == "__main__":
+    if USE_CUDA:
+        print("GPUs Detected. Accelerating.")
+
     parser = argparse.ArgumentParser(
-        description="PyTorch Implementation of LeNet.",  # program title
+        description="Image classifiers implemented with PyTorch",  # title
     )
     parser.add_argument(
-        '-models',  # argument name
+        '-build',
+        type=bool,
+        help='install all requirements',
+        required=False,
+        default=False,
+    )
+    parser.add_argument(
+        '-epochs',  # argument name
         type=int,  # default data type
-        help="The number of models to run",  # cli help description
+        help="total epochs to run",  # cli help description
         required=False,  # does this need to be passed
         default=1,  # default value for the argument
     )
     parser.add_argument(
         '-training',
         type=bool,
-        help='training?',
+        help='are you training?',
         required=False,
         default=True,
-    )
-    parser.add_argument(
-        '-verbose',
-        type=bool,
-        help='print modeling training progress',
-        required=False,
-        default=False,
     )
     parser.add_argument(
         '-plot',
@@ -190,42 +188,27 @@ if __name__ == "__main__":
         required=False,
         default=False,
     )
-    parser.add_argument(
-        '-build',
-        type=bool,
-        help='install requirements',
-        required=False,
-        default=False,
-    )
-    try:
-        args = parser.parse_args(sys.argv[1:])
-    except IndexError:
-        args = parser.parse_args()  # use default values
+    args = parser.parse_args()  # use default values
 
     # accessing parsed args
-    models = args.models
+    build = args.build
+    epochs = args.epochs
     training = args.training
-    verbose = args.verbose
     plot = args.plot
     save_fig = args.savefig
-    build = args.build
 
     if build:
         pip.main(['install', '-r', 'requirements.txt'])
 
     # run main code
-    results = main(models, training, verbose)
+    results = main(epochs, training)
 
     df = pd.DataFrame.from_dict(results)
-    loss_ = plot_loss(df)
-    acc_ = plot_accuracy(df)
-    if plot:
-        print("plotting figures")
-        plt.show()
-    if save_fig:
-        print("saving figures")
-        plt.rcParams["figure.figsize"] = (9, 12)
-        loss_.savefig('plots/loss.png', dpi=256)
-        acc_.savefig('plots/accuracy.png', dpi=156)
+    loss_ = plot_loss(df, save_fig)
+    acc_ = plot_accuracy(df, save_fig)
 
-    parser.exit(message="training complete\n")
+    if plot:
+        print("Plotting results...")
+        plt.show()
+
+    parser.exit(message="\n\t\t\t- messiest.\n\n")
