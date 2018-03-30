@@ -1,1 +1,1 @@
-# `pytorch-image-classifiers``
+# `pytorch-image-classifiers`
