@@ -1,5 +1,4 @@
 import sys
-import pip
 import shutil
 import argparse
 from collections import defaultdict
@@ -64,6 +63,11 @@ def load_data(training=True):
 
 def train(model, dataloader, criterion, optimizer, epoch):
     scores = []
+
+    steps = []
+    losses = []
+    accuracies = []
+
     running_loss = 0.0
     correct = 0
     total = 0
@@ -87,20 +91,23 @@ def train(model, dataloader, criterion, optimizer, epoch):
 
         running_loss += loss.data[0]
 
-        if i % 50 == 49:  # print every 100 mini-batches
+        if i % 100 == 99:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
             accuracy = 100. * correct / total
-            scores.append((i+1, running_loss/100, accuracy))
+
+            steps.append(i+1)
+            losses.append(running_loss/100)
+            accuracies.append(accuracy)
 
             pbar.set_description(
                 "Epoch %2d, Accuracy %.2f%%, Progress" % (epoch, accuracy)
             )
-
             running_loss = 0.0  # zero the loss
 
-    return scores
+
+    return steps, losses, accuracies
 
 
 def main(epochs, training=True):
@@ -123,20 +130,19 @@ def main(epochs, training=True):
 
     for i in range(epochs):
 
-        scores = train(
+        steps, losses, acc = train(
             net,  # our model
             dataloader,  # the data provider
             criterion,  # the loss function
             optimizer,  # the optimization algorithm
             i+1,  # current epoch
         )
-        step, loss, acc = unpack_data(scores)
 
         # add observations to the dictionary
-        results['step'] += step
-        results['loss_scores'] += loss
+        results['step'] += steps
+        results['loss_scores'] += losses
         results['acc_scores'] += acc
-        results['epoch'] += [i+1] * len(step)
+        results['epoch'] += [i+1] * len(steps)
 
         if training:
             save_checkpoint({
@@ -153,13 +159,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Image classifiers implemented with PyTorch",  # title
-    )
-    parser.add_argument(
-        '-build',
-        type=bool,
-        help='install all requirements',
-        required=False,
-        default=False,
     )
     parser.add_argument(
         '-epochs',  # argument name
@@ -192,14 +191,10 @@ if __name__ == "__main__":
     args = parser.parse_args()  # use default values
 
     # accessing parsed args
-    build = args.build
     epochs = args.epochs
     training = args.training
     plot = args.plot
     save_fig = args.savefig
-
-    if build:
-        pip.main(['install', '-r', 'requirements.txt'])
 
     # run main code
     results = main(epochs, training)
@@ -211,5 +206,3 @@ if __name__ == "__main__":
     if plot:
         print("Plotting results...")
         plt.show()
-
-    # parser.exit(message="\n\t\t\t- messiest.\n\n")
