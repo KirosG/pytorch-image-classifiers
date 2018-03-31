@@ -1,11 +1,11 @@
-import sys
-import shutil
 import argparse
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm, trange
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,9 +14,7 @@ from torch.autograd import Variable
 import torchvision
 import torchvision.transforms as transforms
 from torchvision.transforms import RandomCrop, RandomRotation
-from matplotlib import rcParams
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 from models.lenet import LeNet
 from visuals import plot_accuracy, plot_loss
@@ -32,11 +30,11 @@ def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
 
 
 def load_data(training=True):
-    transform_ = transforms.Compose(
-        [RandomRotation(45),
-         RandomCrop(28),
-         transforms.ToTensor()]
-    )
+    transform_ = transforms.Compose([
+        RandomRotation(45),
+        RandomCrop(28),
+        transforms.ToTensor(),
+    ])
     data = torchvision.datasets.MNIST(
         root='./data/',
         train=training,
@@ -45,7 +43,7 @@ def load_data(training=True):
     )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=8,
+        batch_size=16,
         shuffle=True,
         num_workers=2,
     )
@@ -98,7 +96,6 @@ def train(model, dataloader, criterion, optimizer, epoch):
             )
             running_loss = 0.0  # zero the loss
 
-
     return steps, losses, accuracies
 
 
@@ -116,14 +113,13 @@ def main(epochs, training=True):
         )
         cudnn.benchmark = True
 
-    dataloader = load_data(training=training)
+    dataloader = load_data()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters())
 
     for i in range(epochs):
-
         steps, losses, acc = train(
-            net,  # our model
+            net,  # the model
             dataloader,  # the data provider
             criterion,  # the loss function
             optimizer,  # the optimization algorithm
