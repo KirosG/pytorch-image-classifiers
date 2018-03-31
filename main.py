@@ -15,7 +15,6 @@ import torchvision
 import torchvision.transforms as transforms
 from torchvision.transforms import RandomCrop, RandomRotation
 
-
 from models.lenet import LeNet
 from visuals import plot_accuracy, plot_loss
 
@@ -52,8 +51,6 @@ def load_data(training=True):
 
 
 def train(model, dataloader, criterion, optimizer, epoch):
-    scores = []
-
     steps = []
     losses = []
     accuracies = []
@@ -102,39 +99,39 @@ def train(model, dataloader, criterion, optimizer, epoch):
 def main(epochs, training=True):
     results = defaultdict(list)
 
-    net = LeNet()
-    print(net)
+    model = LeNet()
+    print(model)
 
     if USE_CUDA:  # GPU optimization
-        net.cuda()
-        net = torch.nn.DataParallel(
-            net,
+        model.cuda()
+        model = torch.nn.DataParallel(
+            model,
             device_ids=range(torch.cuda.device_count())
         )
         cudnn.benchmark = True
 
     dataloader = load_data()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(net.parameters())
+    optimizer = optim.Adam(model.parameters())
 
-    for i in range(epochs):
+    for epoch in range(epochs):
         steps, losses, acc = train(
-            net,  # the model
+            model,  # the model
             dataloader,  # the data provider
             criterion,  # the loss function
             optimizer,  # the optimization algorithm
-            i+1,  # current epoch
+            epoch+1,  # current epoch
         )
 
         # add observations to the dictionary
         results['step'] += steps
         results['loss_scores'] += losses
         results['acc_scores'] += acc
-        results['epoch'] += [i+1] * len(steps)
+        results['epoch'] += [epoch+1] * len(steps)
 
         if save:
             save_checkpoint({
-                'state_dict': net.state_dict(),
+                'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
             })
 
@@ -148,6 +145,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Image classifiers implemented with PyTorch",  # title
     )
+
     parser.add_argument(
         '-epochs',  # argument name
         type=int,  # default data type
