@@ -136,7 +136,7 @@ def main(epochs, training=True):
         results['acc_scores'] += acc
         results['epoch'] += [i+1] * len(steps)
 
-        if training:
+        if save:
             save_checkpoint({
                 'state_dict': net.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -160,9 +160,9 @@ if __name__ == "__main__":
         default=1,  # default value for the argument
     )
     parser.add_argument(
-        '-training',
+        '-save',
         type=bool,
-        help='are you training?',
+        help='save model checkpoints',
         required=False,
         default=True,
     )
@@ -184,12 +184,12 @@ if __name__ == "__main__":
 
     # accessing parsed args
     epochs = args.epochs
-    training = args.training
+    save = args.save
     plot = args.plot
     save_fig = args.savefig
 
     # run main code
-    results = main(epochs, training)
+    results = main(epochs, save)
 
     df = pd.DataFrame.from_dict(results)
     loss_ = plot_loss(df, save_fig)
