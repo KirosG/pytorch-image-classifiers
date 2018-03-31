@@ -31,14 +31,6 @@ def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
-def unpack_data(data):
-    iterations = [i[0] for i in data]
-    loss_scores = [i[1] for i in data]
-    acc_scores = [i[2] for i in data]
-
-    return iterations, loss_scores, acc_scores
-
-
 def load_data(training=True):
     transform_ = transforms.Compose(
         [RandomRotation(45),
