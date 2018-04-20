@@ -5,8 +5,7 @@ import torch.nn.functional as F  # torch functions
 
 class LeNet(nn.Module):
     def __init__(self):
-        super(LeNet, self).__init__()  # run initializer on the parent class
-
+        super(LeNet, self).__init__()  # run __init__ of parent class
         # Convolutional Layers
         # 1 image, 6 output channels, 5x5 convolution
         self.conv1 = nn.Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1))
@@ -25,12 +24,13 @@ class LeNet(nn.Module):
         forward must be overwritten in torch model class
         """
         # Convolutional Layers
-        # add pooling layers and dropout layers
+        ## add pooling layers
         x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
         x = F.max_pool2d(F.relu(self.conv2(x)), (2, 2))
         x = x.view(-1, 256)  # flatten to pass to fully connected layers
 
         # fully connected layers
+        ## and dropout layers
         x = F.relu(self.dropout(self.fc1(x)))
         x = F.relu(self.dropout(self.fc2(x)))
         x = self.fc3(x)
@@ -38,7 +38,9 @@ class LeNet(nn.Module):
         return x
 
     def num_flat_features(self, x):
-        """return the number of flat features from a pytorch variable"""
+        """
+        return the number of flat features from a pytorch variable
+        """
         return int(np.prod(x.size()[1:]))
 
 
