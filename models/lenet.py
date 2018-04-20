@@ -17,18 +17,22 @@ class LeNet(nn.Module):
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, 10)
 
+        # Dropout Layer
+        self.dropout = nn.Dropout(p=0.25)
+
     def forward(self, x):
         """
         forward must be overwritten in torch model class
         """
         # Convolutional Layers
-        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))  # add pooling layers
+        # add pooling layers and dropout layers
+        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
         x = F.max_pool2d(F.relu(self.conv2(x)), (2, 2))
         x = x.view(-1, 256)  # flatten to pass to fully connected layers
 
         # fully connected layers
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.relu(self.dropout(self.fc1(x)))
+        x = F.relu(self.dropout(self.fc2(x)))
         x = self.fc3(x)
 
         return x
