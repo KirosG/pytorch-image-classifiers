@@ -13,7 +13,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torchvision
 import torchvision.transforms as transforms
-from torchvision.transforms import RandomCrop, RandomRotation
+from torchvision.transforms import RandomCrop, RandomRotation, Resize, Grayscale
 
 from models.lenet import LeNet
 from visuals import plot_accuracy, plot_loss
@@ -28,8 +28,10 @@ def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
-def load_data(training=True):
+def mnist_data(training=True):
     transform_ = transforms.Compose([
+        Grayscale(),
+        Resize(28),
         RandomRotation(45),
         RandomCrop(28),
         transforms.ToTensor(),
@@ -40,26 +42,34 @@ def load_data(training=True):
         download=True,
         transform=transform_,
     )
+    # data = torchvision.datasets.CIFAR10(
+    #     root='./data/',
+    #     train=training,
+    #     download=True,
+    #     transform=transform_,
+    # )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=16,
+        batch_size=128,
         shuffle=True,
-        num_workers=2,
+        num_workers=8,
     )
 
     return loader
 
 
-def train(model, dataloader, criterion, optimizer, epoch):
+def train(model, dataloader, criterion, optimizer, epoch=0):
     steps = []
     losses = []
     accuracies = []
 
     running_loss = 0.0
-    correct = 0
     total = 0
+    correct = 0
 
-    pbar = tqdm(dataloader, unit='batch')  # iterable for progress bar
+    desc = "Epoch %2d, Accuracy %.0f%%, Progress"
+
+    pbar = tqdm(dataloader, unit='batch', desc=desc % (epoch+1, np.NaN))
 
     for i, (inputs, labels) in enumerate(pbar):
         # wrap features as torch Variables
@@ -76,7 +86,7 @@ def train(model, dataloader, criterion, optimizer, epoch):
         loss.backward()  # compute back propagation
         optimizer.step()  # update model parameters
 
-        running_loss += loss.data[0]
+        running_loss += loss.item()
 
         if i % 100 == 99:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
@@ -89,20 +99,20 @@ def train(model, dataloader, criterion, optimizer, epoch):
             accuracies.append(accuracy)
 
             pbar.set_description(
-                "Epoch %2d, Accuracy %.2f%%, Progress" % (epoch, accuracy)
+                desc % (epoch+1, accuracy)
             )
             running_loss = 0.0  # zero the loss
 
     return steps, losses, accuracies
 
 
-def main(epochs, training=True):
+def main(epochs, training=True, use_cuda=USE_CUDA):
     results = defaultdict(list)
 
     model = LeNet()
     print(model)
 
-    if USE_CUDA:  # GPU optimization
+    if use_cuda:  # GPU acceleration
         model.cuda()
         model = torch.nn.DataParallel(
             model,
@@ -110,7 +120,7 @@ def main(epochs, training=True):
         )
         cudnn.benchmark = True
 
-    dataloader = load_data()
+    dataloader = mnist_data()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
 
@@ -120,7 +130,7 @@ def main(epochs, training=True):
             dataloader,  # the data provider
             criterion,  # the loss function
             optimizer,  # the optimization algorithm
-            epoch+1,  # current epoch
+            epoch,  # current epoch
         )
 
         # add observations to the dictionary
@@ -154,33 +164,28 @@ if __name__ == "__main__":
         default=1,  # default value for the argument
     )
     parser.add_argument(
-        '-save',
-        type=bool,
+        '--save_model',
+        action='store_true',
         help='save model checkpoints',
-        required=False,
-        default=True,
     )
     parser.add_argument(
-        '-plot',
-        type=bool,
+        '--plot',
+        action='store_true',
         help='plot model results',
-        required=False,
-        default=False,
     )
     parser.add_argument(
-        '-savefig',
-        type=bool,
+        '--save_fig',
+        action='store_true',
         help='save figures',
-        required=False,
-        default=False,
     )
+
     args = parser.parse_args()  # use default values
 
     # accessing parsed args
     epochs = args.epochs
-    save = args.save
+    save = args.save_model
     plot = args.plot
-    save_fig = args.savefig
+    save_fig = args.save_fig
 
     # run main code
     results = main(epochs, save)
