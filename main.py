@@ -112,7 +112,7 @@ def main(epochs, save=True, training=True, use_cuda=USE_CUDA):
             model,
             device_ids=range(torch.cuda.device_count())
         )
-        cudnn.benchmark = True
+        torch.backends.cudnn.benchmark = True
 
     dataloader = mnist_data()
     criterion = nn.CrossEntropyLoss()

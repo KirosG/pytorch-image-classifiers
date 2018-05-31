@@ -44,7 +44,7 @@ def cifar_data(training=True):
     )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=64,
+        batch_size=256,
         shuffle=True,
         num_workers=8,
     )
@@ -112,8 +112,8 @@ def main(epochs, training=True, use_cuda=USE_CUDA):
             model,
             device_ids=range(torch.cuda.device_count())
         )
-        cudnn.benchmark = True
-
+        torch.backends.cudnn.benchmark = True
+        
     dataloader = cifar_data()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
