@@ -28,15 +28,15 @@ def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
-def mnist_data(training=True):
+def cifar_data(training=True):
     transform_ = transforms.Compose([
         # Grayscale(),
         # Resize(28),
         RandomRotation(45),
-        RandomCrop(28),
+        RandomCrop(32),
         transforms.ToTensor(),
     ])
-    data = torchvision.datasets.MNIST(
+    data = torchvision.datasets.CIFAR10(
         root='./data/',
         train=training,
         download=True,
@@ -44,7 +44,7 @@ def mnist_data(training=True):
     )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=128,
+        batch_size=64,
         shuffle=True,
         num_workers=8,
     )
@@ -100,10 +100,10 @@ def train(model, dataloader, criterion, optimizer, epoch=0):
     return steps, losses, accuracies
 
 
-def main(epochs, save=True, training=True, use_cuda=USE_CUDA):
+def main(epochs, training=True, use_cuda=USE_CUDA):
     results = defaultdict(list)
 
-    model = LeNet()
+    model = GoogLeNet()
     print(model)
 
     if use_cuda:  # GPU acceleration
@@ -114,7 +114,7 @@ def main(epochs, save=True, training=True, use_cuda=USE_CUDA):
         )
         cudnn.benchmark = True
 
-    dataloader = mnist_data()
+    dataloader = cifar_data()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
 

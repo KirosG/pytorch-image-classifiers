@@ -13,6 +13,7 @@ class LeNet(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1))
 
         # Fully Connected Layers
+
         self.fc1 = nn.Linear(256, 128)
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, 10)
@@ -45,6 +46,15 @@ class LeNet(nn.Module):
         return int(np.prod(x.size()[1:]))
 
 
-if __name__ == "__main__":
+def test():
     net = LeNet()
     print(net)
+    dims = (1,1,28,28)
+    print("Dimensions: " + " x ".join([str(d) for d in dims][1:]))
+    x = torch.randn(dims)
+    y = net(x)
+    print("Classes:", y.size()[1])
+
+
+if __name__ == "__main__":
+    test()
