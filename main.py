@@ -1,3 +1,4 @@
+import os
 import argparse
 from collections import defaultdict
 
@@ -19,19 +20,20 @@ from models.LeNet import LeNet
 from models.GoogLeNet import GoogLeNet
 from visuals import plot_accuracy, plot_loss
 
+EPOCHS = 4
+BATCH_SIZE = 128
 USE_CUDA = torch.cuda.is_available()
 
-sns.set_style('darkgrid')
+
+def save_checkpoint(model, dir='checkpoints/'):
+    name = model.__class__.__name__  # get the name of the model class
+    state = model.state_dict()
+    filename = "%s.tar" % name
+    torch.save(state, os.path.join(dir, filename))
 
 
-def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
-    torch.save(state, filename)
-
-
-def mnist_data(training=True):
+def mnist_data(training=True, batch=BATCH_SIZE):
     transform_ = transforms.Compose([
-        # Grayscale(),
-        # Resize(28),
         RandomRotation(45),
         RandomCrop(28),
         transforms.ToTensor(),
@@ -44,9 +46,9 @@ def mnist_data(training=True):
     )
     loader = torch.utils.data.DataLoader(
         data,
-        batch_size=128,
+        batch_size=batch,
         shuffle=True,
-        num_workers=8,
+        num_workers=4,
     )
 
     return loader
@@ -61,14 +63,13 @@ def train(model, dataloader, criterion, optimizer, epoch=0):
     total = 0
     correct = 0
 
-    desc = "Epoch %2d, Accuracy %.0f%%, Progress"
+    desc = "Epoch %2d, Loss %.2f, Accuracy %.0f%%, Progress"
 
-    pbar = tqdm(dataloader, unit='batch', desc=desc % (epoch+1, np.NaN))
+    pbar = tqdm(dataloader, unit='batch', desc=desc % (epoch+1, np.NaN, np.NaN))
 
     for i, (inputs, labels) in enumerate(pbar):
         # wrap features as torch Variables
-        if USE_CUDA:
-            inputs, labels = inputs.cuda(), labels.cuda()
+        if USE_CUDA: inputs, labels = inputs.cuda(), labels.cuda()
         inputs, labels = Variable(inputs), Variable(labels)
 
         # zero the parameter gradients
@@ -82,18 +83,18 @@ def train(model, dataloader, criterion, optimizer, epoch=0):
 
         running_loss += loss.item()
 
-        if i % 100 == 99:  # print every 100 mini-batches
+        if i % 10 == 9:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
             accuracy = 100. * correct / total
 
             steps.append(i+1)
-            losses.append(running_loss/100)
+            losses.append(running_loss)
             accuracies.append(accuracy)
 
             pbar.set_description(
-                desc % (epoch+1, accuracy)
+                desc % (epoch+1, running_loss, accuracy)
             )
             running_loss = 0.0  # zero the loss
 
@@ -134,10 +135,7 @@ def main(epochs, save=True, training=True, use_cuda=USE_CUDA):
         results['epoch'] += [epoch+1] * len(steps)
 
         if save:
-            save_checkpoint({
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-            })
+            save_checkpoint(model)
 
     return results
 
@@ -153,7 +151,14 @@ if __name__ == "__main__":
         type=int,  # default data type
         help="total epochs to run",  # cli help description
         required=False,  # does this need to be passed
-        default=1,  # default value for the argument
+        default=EPOCHS,  # default value for the argument
+    )
+    parser.add_argument(
+        '-batch',  # argument name
+        type=int,  # default data type
+        help="size of batch to run",  # cli help description
+        required=False,  # does this need to be passed
+        default=BATCH_SIZE,  # default value for the argument
     )
     parser.add_argument('--save_model', action='store_true',  # use as a flag
         help='save model checkpoints',
@@ -171,7 +176,6 @@ if __name__ == "__main__":
 
     df = pd.DataFrame.from_dict(results)
     loss_ = plot_loss(df, args.save_fig)
-    acc_ = plot_accuracy(df, args.save_fig)
 
     if args.plot:
         print("Plotting results...")

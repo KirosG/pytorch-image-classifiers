@@ -30,8 +30,6 @@ def save_checkpoint(state, filename='checkpoints/checkpoint.pth.tar'):
 
 def cifar_data(training=True):
     transform_ = transforms.Compose([
-        # Grayscale(),
-        # Resize(28),
         RandomRotation(45),
         RandomCrop(32),
         transforms.ToTensor(),
@@ -82,7 +80,7 @@ def train(model, dataloader, criterion, optimizer, epoch=0):
 
         running_loss += loss.item()
 
-        if i % 100 == 99:  # print every 100 mini-batches
+        if i % 10 == 9:  # print every 100 mini-batches
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += predicted.eq(labels.data).cpu().sum()
@@ -100,7 +98,7 @@ def train(model, dataloader, criterion, optimizer, epoch=0):
     return steps, losses, accuracies
 
 
-def main(epochs, training=True, use_cuda=USE_CUDA):
+def main(epochs, save, training=True, use_cuda=USE_CUDA):
     results = defaultdict(list)
 
     model = GoogLeNet()
@@ -113,7 +111,7 @@ def main(epochs, training=True, use_cuda=USE_CUDA):
             device_ids=range(torch.cuda.device_count())
         )
         torch.backends.cudnn.benchmark = True
-        
+
     dataloader = cifar_data()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
